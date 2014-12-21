@@ -3,16 +3,12 @@ package ProcessorModeling.GUI;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 
-public class MyTabel implements TableModel {
+public class RegistersTable implements TableModel {
 
     private int[] values=new int[0];
 
-    public void setSize(int size) {
-        values=new int[size];
-    }
-
-    public void pushValue(int index, int value) {
-        values[index]=value;
+    public void pushValue(int[] data) {
+        values=data;
     }
 
     @Override
@@ -36,7 +32,7 @@ public class MyTabel implements TableModel {
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        return String.class;
+        return columnIndex==0?Integer.class:String.class;
     }
 
     @Override
@@ -47,7 +43,7 @@ public class MyTabel implements TableModel {
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         if (columnIndex==0)
-        return "Register "+rowIndex;
+        return rowIndex;
         return values[rowIndex];
     }
 

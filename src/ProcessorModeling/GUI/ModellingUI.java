@@ -11,13 +11,14 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.*;
+import java.util.ArrayList;
 
 public class ModellingUI extends JFrame {
     private JEditorPane source;
     private JTable table;
     private JPanel mainPane;
     private JButton stepButton;
-    private JEditorPane outputPane;
+    private JTextField outputPane;
     private JScrollPane sourceScroll;
     private JButton fastButton;
     private JButton slowButton;
@@ -29,9 +30,48 @@ public class ModellingUI extends JFrame {
     private JButton showManualButton;
     private JButton saveButton;
     private JButton loadButton;
-
+    private JPanel ProgramStatistic;
+    private JTextField statField;
+    private JTable definesTable;
+    private JScrollPane defsPane;
+    private JPanel Defines;
+    private JButton dropData;
     private Data data;
-    private MyTabel tableModel = new MyTabel();
+    private RegistersTable tableModel;
+    private DefinesTable defsModel;
+    private boolean compiled=false;
+    private static final String man=
+            "SYNTAX:\n"+
+                    "COMMAND (or its index) ARG1 ARG2 ;COMMENT\n"+
+                    "\n"+
+                    "COMMANDS:\n"+
+                    "0 - writeConst(register, value)\n" +
+                    "1 - copy(register from, register to)\n" +
+                    "2 - sum (register, addition register)\n" +
+                    "3 - subtract (register, subtraction register)\n" +
+                    "4 - multiply (register, multiplying register)\n" +
+                    "5 - divide (register, divider register)\n" +
+                    "6 - equals0 (register for answer, comparing register)\n" +
+                    "7 - and (register for answer, addition register)\n" +
+                    "8 - or (register for answer, addition register)\n" +
+                    "9 - xor (register for answer, addition register)\n" +
+                    "10 - not (register for answer, inverting register)\n" +
+                    "11 - goTo (mark index, empty)\n" +
+                    "12 - goToIf (register eq/not eq to 1, mark index)\n" +
+                    "13 - stop (empty, empty)\n" +
+                    "14 - printChar (register with data, empty)\n" +
+                    "15 - printInt (register with data, empty)\n" +
+                    "16 - readInt (register to read, empty)\n" +
+                    "17 - mark (mark index, empty)\n" +
+                    "18 - putFrom (register, register, which contains index of source register)\n" +
+                    "19 - putTo (register which contains index of result register, register)\n" +
+                    "\n" +
+                    "DEFINES:\n" +
+                    "#DEF WORD_WHICH_WILL_BE_REPLACED WORD_WHICH_WILL_REPLACE\n" +
+                    "\n" +
+                    "";
+
+
 
     public static void writeLines(File file, String data) throws Exception {
         BufferedWriter bw=new BufferedWriter(new FileWriter(file));
@@ -49,6 +89,25 @@ public class ModellingUI extends JFrame {
         }
         input.close();
         return Lines;
+    }
+
+    private void repaintTables() {
+        if (data!=null) {
+            tableModel.pushValue(data.getRegisters());
+            defsModel.pushValues(data.getDefinedNames(), data.getDefinedValues());
+        }
+        else {
+            tableModel.pushValue(new int[]{});
+            defsModel.pushValues(new ArrayList<>(), new ArrayList<>());
+        }
+        table.updateUI();
+        definesTable.updateUI();
+    }
+
+    private void processCompilationException(String excptText) {
+        JOptionPane.showMessageDialog(this, "Failed to compile! " + excptText, "Error", JOptionPane.ERROR_MESSAGE);
+        compiled=false;
+        data=null;
     }
 
     private void tryCompile() {
@@ -71,14 +130,26 @@ public class ModellingUI extends JFrame {
                     outputPane.setText(outputPane.getText() + a);
                 }
             });
-            table.repaint();
-            tablePane.repaint();
-            data.start();
-        } catch (Exception e1) {
+            compiled=true;
+        }
+        catch (ArrayIndexOutOfBoundsException e1) {
             e1.printStackTrace();
-            JOptionPane.showMessageDialog(this, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            processCompilationException("Wrong number of parameters");
+        }
+        catch (NumberFormatException e1) {
+            e1.printStackTrace();
+            processCompilationException("Excepted integer number, found something else");
+        }
+        catch (Exception e1) {
+            e1.printStackTrace();
+            processCompilationException("Unknown error");
+        }
+        finally {
+            repaintTables();
         }
     }
+
+
 
     private void updateHighline() {
         String text = source.getText();
@@ -164,7 +235,34 @@ public class ModellingUI extends JFrame {
                     e1.printStackTrace();
                 }
             }
+            compiled=false;
+        }
+    }
 
+    private void processRuntimeException(String excptText) {
+        JOptionPane.showMessageDialog(this, "Exception in your code! "+excptText, "Error", JOptionPane.ERROR_MESSAGE);
+        statField.setText("Executed " + data.getExecutedCommands() + " commands" + ", last command: " + data.getIndex() + ", stopped with exception");
+        compiled=false;
+    }
+
+    private void doOneStep() {
+        try {
+            data.makeStep();
+            tableModel.pushValue(data.getRegisters());
+            statField.setText("Executed " + data.getExecutedCommands() + " commands" + ", last command: " + data.getIndex());
+            repaintTables();
+        }
+        catch (ArithmeticException e) {
+            e.printStackTrace();
+            processRuntimeException("Divide by zero");
+        }
+        catch (ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
+            processRuntimeException("Not correct register index");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            processRuntimeException("Unknown error");
         }
     }
 
@@ -176,19 +274,18 @@ public class ModellingUI extends JFrame {
         setContentPane(mainPane);
 
         sourceScroll.setMinimumSize(new Dimension(300, 100));
-        table.setModel(tableModel);
-        tableModel.setSize(Data.size);
+
+        table.setModel(tableModel = new RegistersTable());
+        definesTable.setModel(defsModel=new DefinesTable());
 
 
 
         source.addKeyListener(new KeyListener() {
             @Override
-            public void keyTyped(KeyEvent e) {
-            }
+            public void keyTyped(KeyEvent e) {}
 
             @Override
-            public void keyPressed(KeyEvent e) {
-            }
+            public void keyPressed(KeyEvent e) {}
 
             @Override
             public void keyReleased(KeyEvent e) {
@@ -196,69 +293,32 @@ public class ModellingUI extends JFrame {
             }
         });
 
-        fastButton.addActionListener(e -> {
-            tryCompile();
-            if (data != null) {
-                while (!data.getIsDone()) {
-                    data.makeStep();
-                    for (int i = 0; i < Data.size; i++)
-                        tableModel.pushValue(i, data.get(i));
-                    table.repaint();
-                    tablePane.repaint();
-                }
-            }
-            else {
-                JOptionPane.showMessageDialog(this, "Not compiled yet", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-
-        String man=
-                "SYNTAX:\n"+
-                "COMMAND ARG1 ARG2 //COMMENT\n"+
-                "\n"+
-                "COMMANDS:\n"+
-                "0 - writeConst(register, value)\n" +
-                "1 - copy(register from, register to)\n" +
-                "2 - sum (register, addition register)\n" +
-                "3 - subtract (register, subtraction register)\n" +
-                "4 - multiply (register, multiplying register)\n" +
-                "5 - divide (register, divider register)\n" +
-                "6 - equals0 (register for answer, comparing register)\n" +
-                "7 - and (register for answer, addition register)\n" +
-                "8 - or (register for answer, addition register)\n" +
-                "9 - xor (register for answer, addition register)\n" +
-                "10 - not (register for answer, inverting register)\n" +
-                "11 - goTo (mark index, empty)\n" +
-                "12 - goToIf (register eq/not eq to 1, mark index)\n" +
-                "13 - stop (empty, empty)\n" +
-                "14 - printChar (register with data, empty)\n" +
-                "15 - printInt (register with data, empty)\n" +
-                "16 - readInt (register to read, empty)\n" +
-                "17 - mark (mark index, empty)\n" +
-                "18 - putFrom (register, register, which contains index of source register)\n" +
-                "19 - putTo (register which contains index of result register, register)\n" +
-                "\n" +
-                "DEFINES:\n" +
-                        "#DEF WORD_WHICH_WILL_BE_REPLACED WORD_WHICH_WILL_REPLACE\n" +
-                        "\n" +
-                        "";
-
         showManualButton.addActionListener(e ->
                 JOptionPane.showMessageDialog(this, man, "Info", JOptionPane.INFORMATION_MESSAGE));
 
-        stepButton.addActionListener(e -> {
+        dropData.addActionListener(e -> {
+            data = null;
+            repaintTables();
+        });
+
+        fastButton.addActionListener(e -> {
             tryCompile();
-            if (data != null) {
-                data.makeStep();
-                for (int i = 0; i < Data.size; i++)
-                    tableModel.pushValue(i, data.get(i));
-                table.repaint();
-                tablePane.repaint();
+            if (compiled) {
+                while (!data.getIsDone() && compiled) {
+                    doOneStep();
+                    if (data.getExecutedCommands()%10000==0 && data.getExecutedCommands()>0) {
+                        TooMuchCommands t=new TooMuchCommands(this, data.getExecutedCommands());
+                        if (t.getWhatToDo()== TooMuchCommands.Action.Stop) {
+                            break;
+                        }
+                    }
+                }
             }
-            else {
-                JOptionPane.showMessageDialog(this, "Not compiled yet", "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        });
+
+        stepButton.addActionListener(e -> {
+            if (!compiled) tryCompile();
+            if (compiled) doOneStep();
         });
 
         loadButton.addActionListener(e -> {
