@@ -9,7 +9,7 @@ public class CommandFactory {
         sum, subtract, multiply, divide,
         equals0, and, or, xor, not,
         goTo, goToIf, stop,
-        printChar, printInt, readInt, mark}
+        printChar, printInt, readInt, mark, putFrom, putTo}
 
     public static Command getCommand(Action type, IO io, int param1, int param2) {
         switch (type) {
@@ -36,6 +36,9 @@ public class CommandFactory {
             case readInt: return r -> r.put(param1, io.readInt());
 
             case mark: return mark;
+
+            case putFrom: return r -> r.put(param1, r.get(param2));
+            case putTo: return r -> r.put(r.get(param1), param2);
         }
         return null;
     }
@@ -58,7 +61,9 @@ public class CommandFactory {
             "printChar",
             "printInt",
             "readInt",
-            "mark"
+            "mark",
+            "putFrom",
+            "putTo"
     };
 
     private static int getTypeByName(String name) {
@@ -87,7 +92,10 @@ public class CommandFactory {
                     Action.printChar,    //   14
                     Action.printInt,     //   15
                     Action.readInt,      //   16
-                    Action.mark};        //   17
+                    Action.mark,         //   17
+                    Action.putFrom,      //   18
+                    Action.putTo,        //   19
+            };
 
     public static Command getCommand(String type, IO io, int param1, int param2) throws Exception {
 

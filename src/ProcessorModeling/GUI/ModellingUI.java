@@ -229,12 +229,20 @@ public class ModellingUI extends JFrame {
                 "8 - or (register for answer, addition register)\n" +
                 "9 - xor (register for answer, addition register)\n" +
                 "10 - not (register for answer, inverting register)\n" +
-                "11 - goTo (codeline index, empty)\n" +
-                "12 - goToIf (register eq/not eq to 1, codeline index)\n" +
+                "11 - goTo (mark index, empty)\n" +
+                "12 - goToIf (register eq/not eq to 1, mark index)\n" +
                 "13 - stop (empty, empty)\n" +
                 "14 - printChar (register with data, empty)\n" +
                 "15 - printInt (register with data, empty)\n" +
-                "16 - readInt (register to read, empty)";
+                "16 - readInt (register to read, empty)\n" +
+                "17 - mark (mark index, empty)\n" +
+                "18 - putFrom (register, register, which contains index of source register)\n" +
+                "19 - putTo (register which contains index of result register, register)\n" +
+                "\n" +
+                "DEFINES:\n" +
+                        "#DEF WORD_WHICH_WILL_BE_REPLACED WORD_WHICH_WILL_REPLACE\n" +
+                        "\n" +
+                        "";
 
         showManualButton.addActionListener(e ->
                 JOptionPane.showMessageDialog(this, man, "Info", JOptionPane.INFORMATION_MESSAGE));
